@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #0a0a0a;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Animated background orbs */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 55% at 5% 10%,  rgba(249,115,22,0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 45% at 95% 5%,  rgba(234,88,12,0.25)  0%, transparent 55%),
+    radial-gradient(ellipse 55% 55% at 85% 90%, rgba(249,115,22,0.30) 0%, transparent 60%),
+    radial-gradient(ellipse 45% 40% at 15% 85%, rgba(180,60,0,0.22)   0%, transparent 55%),
+    radial-gradient(ellipse 35% 35% at 50% 50%, rgba(249,115,22,0.08) 0%, transparent 70%);
+  animation: orbs 10s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Dot grid overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Extra floating orb via a pseudo on html */
+html::before {
+  content: '';
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(249,115,22,0.18) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse-orb 8s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes orbs {
+  0%   { opacity: 1;   transform: scale(1)    rotate(0deg); }
+  33%  { opacity: 0.85; transform: scale(1.08) rotate(2deg); }
+  66%  { opacity: 0.9;  transform: scale(0.95) rotate(-2deg); }
+  100% { opacity: 1;   transform: scale(1.05) rotate(1deg); }
+}
+
+@keyframes pulse-orb {
+  0%   { transform: translate(-50%, -50%) scale(0.8);  opacity: 0.4; }
+  50%  { transform: translate(-40%, -60%) scale(1.1);  opacity: 0.7; }
+  100% { transform: translate(-60%, -40%) scale(0.9);  opacity: 0.5; }
+}
+
+/* Ensure content sits above background */
+#root > div {
+  position: relative;
+  z-index: 1;
+}
