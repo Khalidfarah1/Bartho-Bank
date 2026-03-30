@@ -38,9 +38,15 @@ transactionsRouter.post('/transfers', authenticate, async (req: Request, res: Re
     res.status(400).json({ error: 'amount must be a positive number' })
     return
   }
-  if (reference && reference.length > 35) {
-    res.status(400).json({ error: 'reference must be 35 characters or fewer' })
-    return
+  if (reference !== undefined) {
+    if (typeof reference !== 'string') {
+      res.status(400).json({ error: 'reference must be a string' })
+      return
+    }
+    if (reference.length > 35) {
+      res.status(400).json({ error: 'reference must be 35 characters or fewer' })
+      return
+    }
   }
 
   try {

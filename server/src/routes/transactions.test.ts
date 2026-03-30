@@ -53,9 +53,39 @@ describe('GET /api/transactions', () => {
     expect(res.body).toHaveLength(1)
     expect(res.body[0].description).toBe('Salary')
   })
+
+  it('returns 404 if account not found', async () => {
+    mockAccount.findUnique.mockResolvedValue(null)
+    const res = await request(app)
+      .get('/api/transactions')
+      .set('Authorization', `Bearer ${makeToken()}`)
+    expect(res.status).toBe(404)
+  })
 })
 
 describe('POST /api/transfers', () => {
+  it('returns 401 without token', async () => {
+    const res = await request(app).post('/api/transfers').send({ toName: 'James', toAccount: '12345678', amount: 50 })
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 400 if toName is missing', async () => {
+    const res = await request(app)
+      .post('/api/transfers')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ toAccount: '12345678', amount: 50 })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/toName/i)
+  })
+
+  it('returns 400 if amount is zero or negative', async () => {
+    const res = await request(app)
+      .post('/api/transfers')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ toName: 'James', toAccount: '12345678', amount: 0 })
+    expect(res.status).toBe(400)
+  })
+
   it('returns 400 if amount exceeds balance', async () => {
     mockAccount.findUnique.mockResolvedValue(FAKE_ACCOUNT as any)
     const res = await request(app)
