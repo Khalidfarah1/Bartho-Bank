@@ -99,6 +99,14 @@ describe('PATCH /api/account', () => {
     expect(updateCall.data).not.toHaveProperty('accountNumber')
   })
 
+  it('returns 400 when no valid fields are provided', async () => {
+    const res = await request(app)
+      .patch('/api/account')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({})
+    expect(res.status).toBe(400)
+  })
+
   it('updates allowed fields and returns updated account', async () => {
     mockAccount.update.mockResolvedValue({ ...FAKE_ACCOUNT, firstName: 'Updated', city: 'Manchester' })
     const res = await request(app)

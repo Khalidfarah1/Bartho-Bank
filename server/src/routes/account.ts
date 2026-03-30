@@ -6,12 +6,16 @@ export const accountRouter = Router()
 
 accountRouter.get('/account', authenticate, async (req: Request, res: Response) => {
   const { userId } = req as AuthenticatedRequest
-  const account = await prisma.account.findUnique({ where: { userId } })
-  if (!account) {
-    res.status(404).json({ error: 'Account not found' })
-    return
+  try {
+    const account = await prisma.account.findUnique({ where: { userId } })
+    if (!account) {
+      res.status(404).json({ error: 'Account not found' })
+      return
+    }
+    res.json(account)
+  } catch {
+    res.status(500).json({ error: 'Internal server error' })
   }
-  res.json(account)
 })
 
 accountRouter.patch('/account', authenticate, async (req: Request, res: Response) => {
@@ -27,9 +31,15 @@ accountRouter.patch('/account', authenticate, async (req: Request, res: Response
   if (city      !== undefined) data.city      = city
   if (postcode  !== undefined) data.postcode  = postcode
 
-  const account = await prisma.account.update({
-    where: { userId },
-    data,
-  })
-  res.json(account)
+  if (Object.keys(data).length === 0) {
+    res.status(400).json({ error: 'No valid fields provided' })
+    return
+  }
+
+  try {
+    const account = await prisma.account.update({ where: { userId }, data })
+    res.json(account)
+  } catch {
+    res.status(500).json({ error: 'Internal server error' })
+  }
 })
