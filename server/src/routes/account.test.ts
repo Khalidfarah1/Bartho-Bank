@@ -66,9 +66,39 @@ describe('GET /api/account', () => {
       .set('Authorization', `Bearer ${makeToken()}`)
     expect(res.status).toBe(404)
   })
+
+  it('returns all required account fields', async () => {
+    mockAccount.findUnique.mockResolvedValue(FAKE_ACCOUNT)
+    const res = await request(app)
+      .get('/api/account')
+      .set('Authorization', `Bearer ${makeToken()}`)
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({
+      iban: 'GB29 BART 2041 0612 3456 78',
+      bic: 'BARTHGB2',
+      sortCode: '20-41-06',
+      accountNumber: '12345678',
+    })
+  })
 })
 
 describe('PATCH /api/account', () => {
+  it('returns 401 without token', async () => {
+    const res = await request(app).patch('/api/account').send({ firstName: 'Test' })
+    expect(res.status).toBe(401)
+  })
+
+  it('ignores disallowed fields in body', async () => {
+    mockAccount.update.mockResolvedValue(FAKE_ACCOUNT)
+    await request(app)
+      .patch('/api/account')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ firstName: 'Test', balance: 99999, accountNumber: '00000000' })
+    const updateCall = mockAccount.update.mock.calls[0][0]
+    expect(updateCall.data).not.toHaveProperty('balance')
+    expect(updateCall.data).not.toHaveProperty('accountNumber')
+  })
+
   it('updates allowed fields and returns updated account', async () => {
     mockAccount.update.mockResolvedValue({ ...FAKE_ACCOUNT, firstName: 'Updated', city: 'Manchester' })
     const res = await request(app)
