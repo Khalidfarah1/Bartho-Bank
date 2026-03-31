@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { clearToken } from '../lib/api'
 
 const nav = [
   { to: '/',          label: 'Dashboard',       icon: HomeIcon },
@@ -9,6 +10,7 @@ const nav = [
 ]
 
 export default function Layout() {
+  const navigate = useNavigate()
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top bar */}
@@ -20,7 +22,12 @@ export default function Layout() {
             </div>
             <span className="text-white text-lg font-semibold tracking-tight">Bartho Bank</span>
           </div>
-          <span className="text-white/30 text-xs hidden sm:block uppercase tracking-widest">Personal Banking</span>
+          <button
+            onClick={() => { clearToken(); navigate('/login') }}
+            className="text-white/30 text-xs hover:text-white/60 transition-colors uppercase tracking-widest"
+          >
+            Log out
+          </button>
         </div>
       </header>
 
