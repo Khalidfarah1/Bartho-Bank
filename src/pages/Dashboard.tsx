@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getState, subscribe, type Transaction } from '../data/store'
+import { api } from '../lib/api'
+import type { Account, Transaction } from '../types'
 
 const categoryColors: Record<string, string> = {
   Income:        'text-emerald-400 bg-emerald-400/10',
@@ -21,20 +22,35 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function categoryEmoji(cat: string) {
+  const map: Record<string, string> = {
+    Income: '💰', Groceries: '🛒', Subscriptions: '📱',
+    Transport: '🚇', Shopping: '🛍️', Dining: '☕',
+    Bills: '⚡', Transfer: '↔️',
+  }
+  return map[cat] ?? '💳'
+}
+
 export default function Dashboard() {
-  const [state, setState] = useState(getState())
-  useEffect(() => subscribe(() => setState(getState())), [])
+  const [account, setAccount] = useState<Account | null>(null)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
 
-  const { balance, transactions, account } = state
+  useEffect(() => {
+    Promise.all([api.getAccount(), api.getTransactions()])
+      .then(([acc, txs]) => { setAccount(acc); setTransactions(txs) })
+      .catch(() => {})
+  }, [])
 
+  const balance = account?.balance ?? 0
   const monthIncome = transactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
   const monthSpend  = transactions.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0)
 
   return (
     <div className="space-y-6 pb-24 md:pb-0">
-      {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-semibold text-white">Good morning, {account.firstName}</h1>
+        <h1 className="text-2xl font-semibold text-white">
+          Good morning{account ? `, ${account.firstName}` : ''}
+        </h1>
         <p className="text-white/40 text-sm mt-1">Here's your account overview</p>
       </div>
 
@@ -46,16 +62,10 @@ export default function Dashboard() {
           <p className="text-5xl font-bold text-black mt-2 tracking-tight">{fmt(balance)}</p>
           <p className="text-black/50 text-sm mt-1">Personal Current Account</p>
           <div className="flex gap-3 mt-6">
-            <Link
-              to="/transfer"
-              className="bg-black text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-black/80 transition-colors"
-            >
+            <Link to="/transfer" className="bg-black text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-black/80 transition-colors">
               Send Money
             </Link>
-            <Link
-              to="/bank"
-              className="bg-black/20 text-black text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-black/30 transition-colors"
-            >
+            <Link to="/bank" className="bg-black/20 text-black text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-black/30 transition-colors">
               Bank Details
             </Link>
           </div>
@@ -113,13 +123,4 @@ export default function Dashboard() {
       </div>
     </div>
   )
-}
-
-function categoryEmoji(cat: string) {
-  const map: Record<string, string> = {
-    Income: '💰', Groceries: '🛒', Subscriptions: '📱',
-    Transport: '🚇', Shopping: '🛍️', Dining: '☕',
-    Bills: '⚡', Transfer: '↔️',
-  }
-  return map[cat] ?? '💳'
 }
