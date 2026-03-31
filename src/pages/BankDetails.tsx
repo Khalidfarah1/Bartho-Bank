@@ -1,9 +1,17 @@
-import { useState } from 'react'
-import { getState } from '../data/store'
+import { useState, useEffect } from 'react'
+import { api } from '../lib/api'
+import type { Account } from '../types'
+
+const ACCOUNT_TYPE = 'Personal Current Account'
+const CURRENCY = 'GBP'
 
 export default function BankDetails() {
-  const { bankDetails, account } = getState()
+  const [account, setAccount] = useState<Account | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+
+  useEffect(() => {
+    api.getAccount().then(setAccount).catch(() => {})
+  }, [])
 
   function copy(value: string, key: string) {
     navigator.clipboard.writeText(value)
@@ -11,15 +19,15 @@ export default function BankDetails() {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const rows = [
-    { label: 'Account Number', value: bankDetails.accountNumber, key: 'acc',  mono: true },
-    { label: 'Sort Code',       value: bankDetails.sortCode,      key: 'sort', mono: true },
-    { label: 'IBAN',            value: bankDetails.iban,           key: 'iban', mono: true },
-    { label: 'BIC / SWIFT',     value: bankDetails.bic,            key: 'bic',  mono: true },
-    { label: 'Account Type',    value: bankDetails.accountType,    key: 'type', mono: false },
-    { label: 'Currency',        value: bankDetails.currency,       key: 'cur',  mono: false },
-    { label: 'Account Holder',  value: `${account.firstName} ${account.lastName}`, key: 'name', mono: false },
-  ]
+  const rows = account ? [
+    { label: 'Account Number', value: account.accountNumber,                      key: 'acc',  mono: true  },
+    { label: 'Sort Code',      value: account.sortCode,                            key: 'sort', mono: true  },
+    { label: 'IBAN',           value: account.iban,                                key: 'iban', mono: true  },
+    { label: 'BIC / SWIFT',    value: account.bic,                                 key: 'bic',  mono: true  },
+    { label: 'Account Type',   value: ACCOUNT_TYPE,                                key: 'type', mono: false },
+    { label: 'Currency',       value: CURRENCY,                                    key: 'cur',  mono: false },
+    { label: 'Account Holder', value: `${account.firstName} ${account.lastName}`,  key: 'name', mono: false },
+  ] : []
 
   return (
     <div className="space-y-6 pb-24 md:pb-0">
@@ -35,7 +43,7 @@ export default function BankDetails() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <p className="text-white/30 text-xs font-medium uppercase tracking-widest">Bartho Bank</p>
-              <p className="text-white font-semibold mt-1">{account.firstName} {account.lastName}</p>
+              <p className="text-white font-semibold mt-1">{account ? `${account.firstName} ${account.lastName}` : '—'}</p>
             </div>
             <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
               <span className="text-black font-bold">B</span>
@@ -44,17 +52,17 @@ export default function BankDetails() {
           <div className="mb-4">
             <p className="text-white/30 text-xs mb-1">Account Number</p>
             <p className="font-mono text-white text-2xl tracking-[0.2em]">
-              {bankDetails.accountNumber.replace(/(.{4})/g, '$1 ').trim()}
+              {account ? account.accountNumber.replace(/(.{4})/g, '$1 ').trim() : '•••• ••••'}
             </p>
           </div>
           <div className="flex gap-8">
             <div>
               <p className="text-white/30 text-xs mb-0.5">Sort Code</p>
-              <p className="font-mono text-white text-sm">{bankDetails.sortCode}</p>
+              <p className="font-mono text-white text-sm">{account?.sortCode ?? '——'}</p>
             </div>
             <div>
               <p className="text-white/30 text-xs mb-0.5">Currency</p>
-              <p className="font-mono text-white text-sm">{bankDetails.currency}</p>
+              <p className="font-mono text-white text-sm">{CURRENCY}</p>
             </div>
           </div>
         </div>
@@ -92,7 +100,6 @@ export default function BankDetails() {
         </ul>
       </div>
 
-      {/* Info */}
       <div className="bg-white/[0.03] border border-white/5 rounded-xl px-5 py-4 text-sm text-white/30">
         <strong className="text-white/50">Receiving payments?</strong> Share your account number and sort code for UK transfers, or your IBAN and BIC for international payments.
       </div>

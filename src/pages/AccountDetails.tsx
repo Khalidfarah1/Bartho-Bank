@@ -1,34 +1,49 @@
 import { useState, useEffect } from 'react'
-import { getState, subscribe, updateAccount, type AccountDetails } from '../data/store'
+import { api } from '../lib/api'
+import type { Account, EditableAccountField } from '../types'
+
+type FormState = Record<EditableAccountField, string>
 
 export default function AccountDetailsPage() {
-  const [saved, setSaved] = useState(getState().account)
-  useEffect(() => subscribe(() => setSaved(getState().account)), [])
-
-  const [form, setForm] = useState<AccountDetails>(saved)
+  const [saved, setSaved] = useState<Account | null>(null)
+  const [form, setForm] = useState<FormState>({ firstName: '', lastName: '', email: '', phone: '', address: '', city: '', postcode: '' })
   const [editing, setEditing] = useState(false)
   const [success, setSuccess] = useState(false)
 
-  useEffect(() => { if (!editing) setForm(saved) }, [saved, editing])
+  useEffect(() => {
+    api.getAccount().then(acc => {
+      setSaved(acc)
+      setForm({ firstName: acc.firstName, lastName: acc.lastName, email: acc.email, phone: acc.phone, address: acc.address, city: acc.city, postcode: acc.postcode })
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!editing && saved) {
+      setForm({ firstName: saved.firstName, lastName: saved.lastName, email: saved.email, phone: saved.phone, address: saved.address, city: saved.city, postcode: saved.postcode })
+    }
+  }, [saved, editing])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
   }
 
-  function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    updateAccount(form)
-    setEditing(false)
-    setSuccess(true)
-    setTimeout(() => setSuccess(false), 3000)
+    try {
+      const updated = await api.updateAccount(form)
+      setSaved(updated)
+      setEditing(false)
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    } catch {}
   }
 
   function handleCancel() {
-    setForm(saved)
+    if (saved) setForm({ firstName: saved.firstName, lastName: saved.lastName, email: saved.email, phone: saved.phone, address: saved.address, city: saved.city, postcode: saved.postcode })
     setEditing(false)
   }
 
-  const fields: { name: keyof AccountDetails; label: string; type?: string; placeholder: string; span?: boolean }[] = [
+  const fields: { name: EditableAccountField; label: string; type?: string; placeholder: string; span?: boolean }[] = [
     { name: 'firstName', label: 'First Name',  placeholder: 'Jane' },
     { name: 'lastName',  label: 'Last Name',   placeholder: 'Smith' },
     { name: 'email',     label: 'Email',       type: 'email', placeholder: 'jane@example.com' },
@@ -59,20 +74,21 @@ export default function AccountDetailsPage() {
       </div>
 
       {/* Avatar card */}
-      <div className="bg-white/[0.04] backdrop-blur-md border border-white/5 rounded-2xl p-5 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-xl bg-orange-500 flex items-center justify-center text-black text-xl font-bold shrink-0">
-          {saved.firstName.charAt(0)}{saved.lastName.charAt(0)}
+      {saved && (
+        <div className="bg-white/[0.04] backdrop-blur-md border border-white/5 rounded-2xl p-5 flex items-center gap-4">
+          <div className="w-14 h-14 rounded-xl bg-orange-500 flex items-center justify-center text-black text-xl font-bold shrink-0">
+            {saved.firstName.charAt(0)}{saved.lastName.charAt(0)}
+          </div>
+          <div>
+            <p className="text-base font-semibold text-white">{saved.firstName} {saved.lastName}</p>
+            <p className="text-sm text-white/40 mt-0.5">{saved.email}</p>
+            <span className="inline-block mt-1.5 text-xs bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded-full font-medium">
+              Verified Account
+            </span>
+          </div>
         </div>
-        <div>
-          <p className="text-base font-semibold text-white">{saved.firstName} {saved.lastName}</p>
-          <p className="text-sm text-white/40 mt-0.5">{saved.email}</p>
-          <span className="inline-block mt-1.5 text-xs bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded-full font-medium">
-            Verified Account
-          </span>
-        </div>
-      </div>
+      )}
 
-      {/* Success */}
       {success && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-5 py-3.5 flex items-center gap-3">
           <span className="text-emerald-400">✓</span>
@@ -80,7 +96,6 @@ export default function AccountDetailsPage() {
         </div>
       )}
 
-      {/* Form */}
       <div className="bg-white/[0.04] backdrop-blur-md border border-white/5 rounded-2xl p-6">
         <form onSubmit={handleSave}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -94,13 +109,12 @@ export default function AccountDetailsPage() {
                   />
                 ) : (
                   <div className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3 text-sm text-white/70">
-                    {saved[name]}
+                    {saved?.[name] || <span className="text-white/20 italic">Not set</span>}
                   </div>
                 )}
               </div>
             ))}
           </div>
-
           {editing && (
             <div className="flex gap-3 mt-6">
               <button type="submit" className="bg-orange-500 text-black font-semibold px-6 py-2.5 rounded-xl hover:bg-orange-400 transition-colors text-sm">
