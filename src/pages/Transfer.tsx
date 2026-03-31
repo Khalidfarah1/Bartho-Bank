@@ -1,33 +1,42 @@
 import { useState, useEffect } from 'react'
-import { getState, subscribe, transferMoney } from '../data/store'
+import { api } from '../lib/api'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(n)
 }
 
-type Status = 'idle' | 'success' | 'error' | 'insufficient'
+type Status = 'idle' | 'success' | 'error' | 'insufficient' | 'loading'
 
 export default function Transfer() {
-  const [balance, setBalance] = useState(getState().balance)
-  useEffect(() => subscribe(() => setBalance(getState().balance)), [])
-
+  const [balance, setBalance] = useState(0)
   const [form, setForm] = useState({ toName: '', toAccount: '', sortCode: '', amount: '', reference: '' })
   const [status, setStatus] = useState<Status>('idle')
+
+  useEffect(() => {
+    api.getAccount().then(acc => setBalance(acc.balance)).catch(() => {})
+  }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
     setStatus('idle')
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const amt = parseFloat(form.amount)
     if (isNaN(amt) || amt <= 0) { setStatus('error'); return }
     if (amt > balance) { setStatus('insufficient'); return }
-    const ok = transferMoney(form.toName, form.toAccount, amt, form.reference)
-    if (ok) {
+    setStatus('loading')
+    try {
+      await api.transfer({ toName: form.toName, toAccount: form.toAccount, amount: amt, reference: form.reference || undefined })
+      const acc = await api.getAccount()
+      setBalance(acc.balance)
       setStatus('success')
       setForm({ toName: '', toAccount: '', sortCode: '', amount: '', reference: '' })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message.toLowerCase() : ''
+      if (msg.includes('insufficient')) setStatus('insufficient')
+      else setStatus('error')
     }
   }
 
@@ -58,7 +67,6 @@ export default function Transfer() {
       {/* Form */}
       <div className="bg-white/[0.04] backdrop-blur-md border border-white/5 rounded-2xl p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
-
           <div>
             <label className="block text-xs font-medium text-white/40 uppercase tracking-wide mb-2">Recipient Name</label>
             <input
@@ -129,15 +137,14 @@ export default function Transfer() {
           </div>
 
           <button
-            type="submit"
-            className="w-full bg-orange-500 text-black font-semibold py-3 rounded-xl hover:bg-orange-400 transition-colors text-sm"
+            type="submit" disabled={status === 'loading'}
+            className="w-full bg-orange-500 text-black font-semibold py-3 rounded-xl hover:bg-orange-400 transition-colors text-sm disabled:opacity-50"
           >
-            Send Money
+            {status === 'loading' ? 'Sending…' : 'Send Money'}
           </button>
         </form>
       </div>
 
-      {/* Warning */}
       <div className="bg-white/[0.03] border border-white/5 rounded-xl px-5 py-4 text-sm text-white/30">
         <strong className="text-white/50">Security reminder:</strong> Always verify recipient details before sending. Bartho Bank will never ask you to transfer money urgently.
       </div>
